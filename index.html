@@ -1320,7 +1320,7 @@ function probarCodigo(){
     try{ localStorage.setItem(CLAVE_ACCESO,'ok'); }catch(e){}
     if(CODICI_PRO.includes(v)){ DB.pro=true; guardarDB(); aggiornaStatoPro(); }
     abrirApp();
-  } else document.getElementById('codigo-err').textContent='Codice non valido. Controlla l’email di consegna.';
+  } else document.getElementById('codigo-err').textContent='Codice non valido. Lo trovi nel PDF «Inizia qui» che hai ricevuto via email.';
 }
 document.getElementById('btn-codigo').addEventListener('click', probarCodigo);
 document.getElementById('codigo').addEventListener('keydown', e=>{ if(e.key==='Enter') probarCodigo(); });
@@ -1339,6 +1339,19 @@ actualizarDropdownGolpe();
 aggiornaStatoPro();
 if(!memoriaOk) document.getElementById('genera-msg').innerHTML = '<div class="empty-msg">Questo browser non permette di salvare dati: i gruppi e le lezioni non resteranno salvati. Apri PadelFlow nel browser normale (non in modalità privata).</div>';
 if(accesoGuardado()) abrirApp();
+
+/* Codice nel link (dal PDF «Inizia qui»): app.padelflow.online/?codice=PADELFLOW26 apre senza scrivere nulla */
+(function(){
+  let c = '';
+  try{ c = (new URLSearchParams(location.search).get('codice') || '').trim().toUpperCase(); }catch(e){}
+  if(!c) return;
+  if(CODICI_BASE.includes(c) || CODICI_PRO.includes(c)){
+    try{ localStorage.setItem(CLAVE_ACCESO,'ok'); }catch(e){}
+    if(CODICI_PRO.includes(c)){ DB.pro=true; guardarDB(); aggiornaStatoPro(); }
+    abrirApp();
+  }
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+})();
 
 (function(){
   const enApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
