@@ -724,8 +724,14 @@ const EJ = [
 ];
 const EJ_ID = {}; EJ.forEach(e=>{ EJ_ID[e.id]=e; });
 
-const CODICI_BASE = ["PADELFLOW26"];
-const CODICI_PRO = ["PADELPRO26"];
+/* Huellas SHA-256 de los códigos (el texto del código no queda escrito en la app) */
+const CODICI_BASE = ["199d1416bb9ad437ad52984ac41fd07ff14fd5708a3038f4d63d2b83c95f4743"];
+const CODICI_PRO = ["df2b2f12b766ab1768ea3891374ee478fb51bfaaf4a5d8b05bd9e02f5408ed8a"];
+async function impronta(c){
+  const dati = new TextEncoder().encode('padelflow-it:' + String(c).trim().toUpperCase());
+  const buf = await crypto.subtle.digest('SHA-256', dati);
+  return Array.from(new Uint8Array(buf)).map(x=>x.toString(16).padStart(2,'0')).join('');
+}
 
 /* ============ ETICHETTE ============ */
 const NIVEL_LABEL = {ini:'Principiante', int:'Intermedio', avz:'Avanzato / Agonistico'};
@@ -1203,9 +1209,9 @@ function vistaPro(){
   const pc = document.getElementById('p-crea'); if(pc) pc.addEventListener('click', creaPiano);
   vistaSchede();
 }
-function attivaPro(codice, errId){
-  if(CODICI_PRO.includes(String(codice).trim().toUpperCase())){ DB.pro=true; guardarDB(); toast('PRO attivato ⭐'); vistaPro(); aggiornaStatoPro(); }
-  else document.getElementById(errId).textContent='Codice PRO non valido. Controlla l’email di acquisto.';
+async function attivaPro(codice, errId){
+  if(CODICI_PRO.includes(await impronta(codice))){ DB.pro=true; guardarDB(); toast('PRO attivato ⭐'); vistaPro(); aggiornaStatoPro(); }
+  else document.getElementById(errId).textContent='Codice PRO non valido. Lo trovi nel PDF di attivazione PRO.';
 }
 function aggiornaStatoPro(){ document.getElementById('pro-stato').textContent = DB.pro? 'PRO attivo su questo dispositivo.' : 'Se hai acquistato PadelFlow PRO, inserisci qui il codice.'; document.getElementById('pill-pro').hidden=!DB.pro; }
 const ROTAZIONE = {
@@ -1314,8 +1320,8 @@ document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',
 const CLAVE_ACCESO = 'padelflow_it_acceso';
 function accesoGuardado(){ try{ return localStorage.getItem(CLAVE_ACCESO)==='ok'; }catch(e){ return false; } }
 function abrirApp(){ document.getElementById('acceso').style.display='none'; }
-function probarCodigo(){
-  const v = val('codigo').trim().toUpperCase();
+async function probarCodigo(){
+  const v = await impronta(val('codigo'));
   if(CODICI_BASE.includes(v) || CODICI_PRO.includes(v)){
     try{ localStorage.setItem(CLAVE_ACCESO,'ok'); }catch(e){}
     if(CODICI_PRO.includes(v)){ DB.pro=true; guardarDB(); aggiornaStatoPro(); }
@@ -1340,18 +1346,6 @@ aggiornaStatoPro();
 if(!memoriaOk) document.getElementById('genera-msg').innerHTML = '<div class="empty-msg">Questo browser non permette di salvare dati: i gruppi e le lezioni non resteranno salvati. Apri PadelFlow nel browser normale (non in modalità privata).</div>';
 if(accesoGuardado()) abrirApp();
 
-/* Codice nel link (dal PDF «Inizia qui»): app.padelflow.online/?codice=PADELFLOW26 apre senza scrivere nulla */
-(function(){
-  let c = '';
-  try{ c = (new URLSearchParams(location.search).get('codice') || '').trim().toUpperCase(); }catch(e){}
-  if(!c) return;
-  if(CODICI_BASE.includes(c) || CODICI_PRO.includes(c)){
-    try{ localStorage.setItem(CLAVE_ACCESO,'ok'); }catch(e){}
-    if(CODICI_PRO.includes(c)){ DB.pro=true; guardarDB(); aggiornaStatoPro(); }
-    abrirApp();
-  }
-  try{ history.replaceState(null, '', location.pathname); }catch(e){}
-})();
 
 (function(){
   const enApp = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
