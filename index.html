@@ -1210,7 +1210,7 @@ function vistaPro(){
   vistaSchede();
 }
 async function attivaPro(codice, errId){
-  if(CODICI_PRO.includes(await impronta(codice))){ DB.pro=true; guardarDB(); toast('PRO attivato ⭐'); vistaPro(); aggiornaStatoPro(); }
+  if(CODICI_PRO.includes(await impronta(codice))){ marcarPro(); toast('PRO attivato ⭐'); vistaPro(); aggiornaStatoPro(); }
   else document.getElementById(errId).textContent='Codice PRO non valido. Lo trovi nel PDF di attivazione PRO.';
 }
 function aggiornaStatoPro(){ document.getElementById('pro-stato').textContent = DB.pro? 'PRO attivo su questo dispositivo.' : 'Se hai acquistato PadelFlow PRO, inserisci qui il codice.'; document.getElementById('pill-pro').hidden=!DB.pro; }
@@ -1298,7 +1298,7 @@ function importa(file){
   const r = new FileReader();
   r.onload = ()=>{
     try{ const j = JSON.parse(r.result); if(j.app!=='padelflow-it' || !j.dati) throw 0;
-      const pro = DB.pro; DB = Object.assign({gruppi:[],lezioni:[],memoria:{},pro:false}, j.dati); DB.pro = DB.pro || pro;
+      DB = Object.assign({gruppi:[],lezioni:[],memoria:{},pro:false}, j.dati); DB.pro = proGuardado();
       guardarDB(); riempiSelectGruppi(); aggiornaStatoPro();
       document.getElementById('backup-msg').innerHTML = `<div class="ok-msg">Copia caricata: ${DB.gruppi.length} gruppi e ${DB.lezioni.length} lezioni.</div>`;
     }catch(e){ document.getElementById('backup-msg').innerHTML = '<div class="empty-msg">Questo file non è una copia di PadelFlow.</div>'; }
@@ -1317,14 +1317,18 @@ function vai(v){
 }
 document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.v==='gruppi') gruppoAperto=null; if(b.dataset.v==='lezioni') lezioneAperta=null; if(b.dataset.v==='pro') schedaAperta=null; vai(b.dataset.v); }));
 
-const CLAVE_ACCESO = 'padelflow_it_acceso';
+/* v3: clave nueva, así los dispositivos que entraron con el link viejo (sin código) vuelven a pedir el código */
+const CLAVE_ACCESO = 'padelflow_it_acceso_v3';
+const CLAVE_PRO = 'padelflow_it_pro_v3';
+function proGuardado(){ try{ return localStorage.getItem(CLAVE_PRO)==='ok'; }catch(e){ return false; } }
+function marcarPro(){ try{ localStorage.setItem(CLAVE_PRO,'ok'); }catch(e){} DB.pro=true; guardarDB(); }
 function accesoGuardado(){ try{ return localStorage.getItem(CLAVE_ACCESO)==='ok'; }catch(e){ return false; } }
 function abrirApp(){ document.getElementById('acceso').style.display='none'; }
 async function probarCodigo(){
   const v = await impronta(val('codigo'));
   if(CODICI_BASE.includes(v) || CODICI_PRO.includes(v)){
     try{ localStorage.setItem(CLAVE_ACCESO,'ok'); }catch(e){}
-    if(CODICI_PRO.includes(v)){ DB.pro=true; guardarDB(); aggiornaStatoPro(); }
+    if(CODICI_PRO.includes(v)){ marcarPro(); aggiornaStatoPro(); }
     abrirApp();
   } else document.getElementById('codigo-err').textContent='Codice non valido. Lo trovi nel PDF «Inizia qui» che hai ricevuto via email.';
 }
@@ -1340,6 +1344,7 @@ document.getElementById('btn-pro2').addEventListener('click', ()=>attivaPro(val(
 document.getElementById('btn-reset-mem').addEventListener('click', ()=>{ DB.memoria={}; guardarDB(); toast('Memoria degli esercizi azzerata'); });
 
 cargarDB();
+DB.pro = proGuardado();
 riempiSelectGruppi();
 actualizarDropdownGolpe();
 aggiornaStatoPro();
